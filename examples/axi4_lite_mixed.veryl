@@ -9,6 +9,7 @@ module axi4_lite_mixed {
     inst clk: $tb::clock_gen;
     inst rst: $tb::reset_gen ( clk );
 
+    #[allow(unassign_variable)]
     inst bus: $std::axi4_lite_if::<mix_pkg>;
 
     inst mst: $comp::axi4_lite_master #(
