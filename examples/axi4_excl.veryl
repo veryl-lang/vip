@@ -1,0 +1,70 @@
+/// AXI4 exclusive-access demo: a read-modify-write using ARLOCK/AWLOCK. The
+/// slave keeps an exclusive monitor. First the master reserves an address and
+/// its exclusive write lands with EXOKAY. Then it reserves again but an
+/// intervening normal write clears the reservation, so the next exclusive
+/// write fails with OKAY and leaves memory untouched. The checker validates
+/// the exclusive constraints and that EXOKAY only answers locked accesses.
+alias package excl_pkg = $std::axi4_pkg::<32, 4, 4, 1, 1, 1, 1, 1>;
+
+#[test(axi4_excl)]
+module axi4_excl {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    inst bus: $std::axi4_if::<excl_pkg>;
+
+    inst mst: $comp::axi4_master (
+        clk            ,
+        rst            ,
+        axi: bus.master,
+    );
+    inst chk: $comp::axi4_checker #(
+        TIMEOUT: 400,
+    ) (
+        clk             ,
+        rst             ,
+        axi: bus.monitor,
+    );
+    inst ram: $comp::axi4_ram (
+        clk           ,
+        rst           ,
+        axi: bus.slave,
+    );
+
+    initial {
+        rst.assert();
+        clk.next(4);
+
+        // Preload a known value so the exclusive read observes it.
+        ram.poke(32'h40, 32'h1111);
+
+        // Success: reserve 0x40, read its value, then the exclusive write to
+        // the still-reserved address succeeds with EXOKAY.
+        mst.exclusive_read(32'h40);
+        clk.next(20);
+        $assert(mst.pop_read() == 32'h1111, "exclusive read returns the current value");
+        mst.exclusive_write(32'h40, 32'hcafe);
+        clk.next(20);
+        $assert(mst.exclusive_ok() == 1, "exclusive write should succeed");
+        mst.read_burst(32'h40, 0);
+        clk.next(20);
+        $assert(mst.pop_read() == 32'hcafe, "exclusive write should have landed");
+
+        // Failure: reserve again, but a normal write clears the reservation,
+        // so the exclusive write fails (OKAY) and memory keeps the normal value.
+        mst.exclusive_read(32'h40);
+        clk.next(20);
+        $assert(mst.pop_read() == 32'hcafe, "exclusive read returns the current value");
+        mst.write(32'h40, 32'hbeef);
+        clk.next(20);
+        mst.exclusive_write(32'h40, 32'hdead);
+        clk.next(20);
+        $assert(mst.exclusive_ok() == 0, "exclusive write should fail after a normal write");
+        mst.read_burst(32'h40, 0);
+        clk.next(20);
+        $assert(mst.pop_read() == 32'hbeef, "failed exclusive write must not modify memory");
+
+        $assert(mst.idle() == 1, "all transactions drained");
+        $finish();
+    }
+}

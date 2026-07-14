@@ -1,0 +1,53 @@
+/// Randomized regression: the master writes random values to random
+/// addresses with random partial byte-strobes, then reads every one back and
+/// self-checks against its byte-merged shadow copy — all through the real
+/// slave memory, while both sides randomly stall and the checker watches.
+alias package rnd_pkg = $std::axi4_lite_pkg::<32, 4, 4>;
+
+#[test(axi4_lite_random)]
+module axi4_lite_random {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    inst bus: $std::axi4_lite_if::<rnd_pkg>;
+
+    inst mst: $comp::axi4_lite_master #(
+        STALL          : 32,
+        MAX_OUTSTANDING: 4 ,
+    ) (
+        clk            ,
+        rst            ,
+        axi: bus.master,
+    );
+    inst chk: $comp::axi4_lite_checker #(
+        TIMEOUT: 500,
+    ) (
+        clk             ,
+        rst             ,
+        axi: bus.monitor,
+    );
+    inst ram: $comp::axi4_lite_ram #(
+        STALL: 32      ,
+        SIZE : 32'h1000,
+    ) (
+        clk           ,
+        rst           ,
+        axi: bus.slave,
+    );
+
+    initial {
+        rst.assert();
+        clk.next(4);
+
+        // 64 random partial-strobe writes into a 1 KiB window, then read
+        // every written address back and self-check.
+        mst.random_strobed_writes(64, 10);
+        clk.next(3000);
+        $assert(mst.idle() == 1, "random writes drained");
+
+        $assert(mst.verify_all() >: 0, "read-back queued");
+        clk.next(3000);
+        $assert(mst.idle() == 1, "read-back drained");
+        $finish();
+    }
+}

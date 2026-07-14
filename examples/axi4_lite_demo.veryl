@@ -1,0 +1,80 @@
+/// End-to-end demo of the AXI4-Lite verification parts under stress: the
+/// master pipelines self-checking transactions with a skewed W channel while
+/// both sides randomly stall; the slave adds latency, bounds its space
+/// (DECERR), write-protects a region (SLVERR) and injects an error response;
+/// and the checker watches with a hang timeout and a liveness watchdog.
+/// A 32-bit-data / 32-bit-address AXI4-Lite bus (`ID` width 4).
+alias package demo_pkg = $std::axi4_lite_pkg::<32, 4, 4>;
+
+#[test(axi4_lite_demo)]
+module axi4_lite_demo {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    inst bus: $std::axi4_lite_if::<demo_pkg>;
+
+    inst mst: $comp::axi4_lite_master #(
+        STALL          : 48,
+        MAX_OUTSTANDING: 4 ,
+        W_DELAY        : 3 ,
+    ) (
+        clk            ,
+        rst            ,
+        axi: bus.master,
+    );
+    inst chk: $comp::axi4_lite_checker #(
+        TIMEOUT : 200,
+        LIVENESS: 400,
+    ) (
+        clk             ,
+        rst             ,
+        axi: bus.monitor,
+    );
+    inst ram: $comp::axi4_lite_ram #(
+        READ_LATENCY : 2       ,
+        WRITE_LATENCY: 1       ,
+        STALL        : 48      ,
+        SIZE         : 32'h1000, // 4 KiB; beyond this answers DECERR
+    ) (
+        clk           ,
+        rst           ,
+        axi: bus.slave,
+    );
+
+    initial {
+        rst.assert();
+        clk.next(4);
+
+        // Backdoor preload, an injected error and a write-protected region.
+        ram.poke(32'h0, 32'hcafe_f00d);
+        ram.set_resp(32'h30, 2); // 0x30 answers SLVERR
+        ram.set_readonly(32'h100, 32'h10); // [0x100, 0x110) is write-protected
+
+        // Self-checking, pipelined writes and reads, plus an atomic
+        // read-modify-write that sets the high byte of 0x10.
+        mst.expect_write(32'h10, 32'h1111_1111);
+        mst.expect_write(32'h20, 32'h2222_2222);
+        mst.expect_read(32'h0, 32'hcafe_f00d);
+        mst.expect_read(32'h10, 32'h1111_1111);
+        mst.expect_read(32'h20, 32'h2222_2222);
+        mst.rmw(32'h10, 32'hff00_0000, 32'haa00_0000);
+        mst.expect_read(32'h10, 32'haa11_1111);
+        clk.next(300);
+        $assert(mst.idle() == 1, "all transactions completed");
+
+        // Error responses: injected SLVERR, out-of-range DECERR, and a
+        // write to the read-only region (SLVERR).
+        mst.write(32'h30, 32'hdead);
+        clk.next(60);
+        $assert(mst.last_bresp() == 2, "0x30 returns SLVERR");
+
+        mst.write(32'h5000, 32'hbeef);
+        clk.next(60);
+        $assert(mst.last_bresp() == 3, "out-of-range returns DECERR");
+
+        mst.write(32'h100, 32'hbeef);
+        clk.next(60);
+        $assert(mst.last_bresp() == 2, "write-protected returns SLVERR");
+        $finish();
+    }
+}

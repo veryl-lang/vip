@@ -1,0 +1,14 @@
+[package]
+name = "vip"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+veryl-component = "0.1.0"
+
+# Standalone package: keep it out of any enclosing cargo workspace.
+[workspace]

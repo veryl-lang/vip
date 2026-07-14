@@ -1,0 +1,80 @@
+/// AXI3 write-data-interleaving demo (the AXI3-only feature). The master
+/// issues four concurrent write bursts and interleaves their W beats by
+/// driving WID; the slave routes each beat back to its transaction by WID and
+/// the checker counts WLAST per WID. A read-back then self-checks every word.
+/// Finally an exclusive read-modify-write exercises the 2-bit AxLOCK: it
+/// succeeds with EXOKAY, then fails with OKAY after an intervening write.
+alias package axi3_il_pkg = $std::axi3_pkg::<32, 4, 4>;
+
+#[test(axi3_interleave)]
+module axi3_interleave {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    inst bus: $std::axi3_if::<axi3_il_pkg>;
+
+    inst mst: $comp::axi3_master #(
+        STALL          : 24,
+        MAX_OUTSTANDING: 4 ,
+    ) (
+        clk            ,
+        rst            ,
+        axi: bus.master,
+    );
+    inst chk: $comp::axi3_checker #(
+        TIMEOUT: 400,
+    ) (
+        clk             ,
+        rst             ,
+        axi: bus.monitor,
+    );
+    inst ram: $comp::axi3_ram #(
+        STALL          : 24,
+        MAX_OUTSTANDING: 4 ,
+    ) (
+        clk           ,
+        rst           ,
+        axi: bus.slave,
+    );
+
+    initial {
+        rst.assert();
+        clk.next(4);
+
+        // Four concurrent 4-beat write bursts; the master interleaves their W
+        // data by WID and the slave routes each beat back to its transaction.
+        mst.burst_write_fill(32'h000, 3);
+        mst.burst_write_fill(32'h040, 3);
+        mst.burst_write_fill(32'h080, 3);
+        mst.burst_write_fill(32'h0C0, 3);
+        clk.next(400);
+
+        // Read every written word back, self-checked against the fill pattern.
+        $assert(mst.verify_all() >: 0, "read-back queued");
+        clk.next(400);
+        $assert(mst.idle() == 1, "interleaved writes drained and verified");
+
+        // Exclusive read-modify-write on the 2-bit AxLOCK.
+        mst.exclusive_read(32'h40);
+        clk.next(20);
+        $assert(mst.pop_read() == 32'h40, "exclusive read returns the fill value");
+        mst.exclusive_write(32'h40, 32'hcafe);
+        clk.next(20);
+        $assert(mst.exclusive_ok() == 1, "exclusive write should succeed");
+
+        mst.exclusive_read(32'h40);
+        clk.next(20);
+        $assert(mst.pop_read() == 32'hcafe, "exclusive read returns the current value");
+        mst.write(32'h40, 32'hbeef);
+        clk.next(20);
+        mst.exclusive_write(32'h40, 32'hdead);
+        clk.next(20);
+        $assert(mst.exclusive_ok() == 0, "exclusive write should fail after a normal write");
+        mst.read_burst(32'h40, 0);
+        clk.next(20);
+        $assert(mst.pop_read() == 32'hbeef, "failed exclusive write must not modify memory");
+
+        $assert(mst.idle() == 1, "all transactions drained");
+        $finish();
+    }
+}

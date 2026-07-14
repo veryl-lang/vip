@@ -1,0 +1,65 @@
+/// Wide-data regression: a 128-bit AXI4-Lite data bus. The master
+/// random-writes full 128-bit values and reads every one back, self-checked
+/// through the real slave memory. The scalar methods (`write`, `poke`,
+/// `pop_read`, `peek`) also carry the full bus width — their value width
+/// follows the connected interface via `axi.DATA_WIDTH_BYTES`.
+alias package wide_pkg = $std::axi4_lite_pkg::<32, 16, 4>;
+
+#[test(axi4_lite_wide)]
+module axi4_lite_wide {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    inst bus: $std::axi4_lite_if::<wide_pkg>;
+
+    inst mst: $comp::axi4_lite_master #(
+        STALL          : 32,
+        MAX_OUTSTANDING: 4 ,
+    ) (
+        clk            ,
+        rst            ,
+        axi: bus.master,
+    );
+    inst chk: $comp::axi4_lite_checker #(
+        TIMEOUT: 500,
+    ) (
+        clk             ,
+        rst             ,
+        axi: bus.monitor,
+    );
+    inst ram: $comp::axi4_lite_ram #(
+        STALL: 32,
+    ) (
+        clk           ,
+        rst           ,
+        axi: bus.slave,
+    );
+
+    var full: logic<128>;
+
+    initial {
+        rst.assert();
+        clk.next(4);
+
+        // A specific 128-bit value through the scalar methods: write it on
+        // the bus, read it back at full width, and cross-check against the
+        // slave's backdoor.
+        mst.write(32'h40, 128'h0123_4567_89ab_cdef_fedc_ba98_7654_3210);
+        mst.read(32'h40);
+        clk.next(60);
+        full = mst.pop_read();
+        $assert(full == 128'h0123_4567_89ab_cdef_fedc_ba98_7654_3210, "full-width round-trip");
+        $assert(ram.peek(32'h40) == full, "backdoor sees the full width");
+
+        // 48 random 128-bit writes into a 512-byte window, then read every
+        // written address back and check the full width.
+        mst.random_writes(48, 9);
+        clk.next(4000);
+        $assert(mst.idle() == 1, "wide writes drained");
+
+        $assert(mst.verify_all() >: 0, "read-back queued");
+        clk.next(4000);
+        $assert(mst.idle() == 1, "wide read-back drained");
+        $finish();
+    }
+}

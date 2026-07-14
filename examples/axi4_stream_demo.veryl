@@ -1,0 +1,54 @@
+/// AXI4-Stream demo: the source drives packets, the sink self-checks each
+/// beat and counts packets, and the passive checker watches the bus via the
+/// `monitor` modport — all while both sides randomly stall.
+/// A 32-bit-data stream (`DATA_W_BYTES` 4).
+alias package stream_pkg = $std::axi4_stream_pkg::<4, 2, 4, 5>;
+
+#[test(axi4_stream_demo)]
+module axi4_stream_demo {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    inst bus: $std::axi4_stream_if::<stream_pkg>;
+
+    inst src: $comp::axi4_stream_source #(
+        STALL: 32,
+    ) (
+        clk                 ,
+        rst                 ,
+        axi: bus.transmitter,
+    );
+    inst snk: $comp::axi4_stream_sink #(
+        STALL: 32,
+    ) (
+        clk              ,
+        rst              ,
+        axi: bus.receiver,
+    );
+    inst chk: $comp::axi4_stream_checker #(
+        TIMEOUT: 200,
+    ) (
+        clk             ,
+        rst             ,
+        axi: bus.monitor,
+    );
+
+    initial {
+        rst.assert();
+        clk.next(4);
+
+        // A three-beat packet; the sink self-checks each beat in order.
+        snk.expect(32'h1111_1111);
+        snk.expect(32'h2222_2222);
+        snk.expect(32'h3333_3333);
+        src.send(32'h1111_1111);
+        src.send(32'h2222_2222);
+        src.send_last(32'h3333_3333);
+        clk.next(100);
+
+        $assert(src.idle() == 1, "source drained");
+        $assert(snk.idle() == 1, "sink checks done");
+        $assert(snk.packets() == 1, "one packet completed");
+        $finish();
+    }
+}

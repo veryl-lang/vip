@@ -1,0 +1,51 @@
+/// AXI4 mixed-burst regression: the master issues random bursts of every
+/// type (INCR / FIXED / WRAP) and random narrow size, with per-beat byte
+/// strobes, then reads every written word back and self-checks — through the
+/// real burst-aware slave, while the checker validates WRAP length/alignment,
+/// 4 KiB boundaries, IDs and size coverage.
+alias package burst_pkg = $std::axi4_pkg::<32, 4, 4, 1, 1, 1, 1, 1>;
+
+#[test(axi4_burst)]
+module axi4_burst {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    inst bus: $std::axi4_if::<burst_pkg>;
+
+    inst mst: $comp::axi4_master #(
+        STALL: 32,
+    ) (
+        clk            ,
+        rst            ,
+        axi: bus.master,
+    );
+    inst chk: $comp::axi4_checker #(
+        TIMEOUT: 400,
+    ) (
+        clk             ,
+        rst             ,
+        axi: bus.monitor,
+    );
+    inst ram: $comp::axi4_ram #(
+        STALL: 32,
+    ) (
+        clk           ,
+        rst           ,
+        axi: bus.slave,
+    );
+
+    initial {
+        rst.assert();
+        clk.next(4);
+
+        // 32 random mixed-type, mixed-size bursts, then verify every word.
+        mst.random_bursts(32, 10, 7);
+        clk.next(6000);
+        $assert(mst.idle() == 1, "bursts drained");
+
+        $assert(mst.verify_all() >: 0, "read-back queued");
+        clk.next(6000);
+        $assert(mst.idle() == 1, "read-back drained");
+        $finish();
+    }
+}

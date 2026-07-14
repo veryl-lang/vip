@@ -1,0 +1,50 @@
+/// Mixed randomized regression: interleaved random reads and writes to a
+/// small window, self-checked by the master. Same-address reads observe the
+/// intended value thanks to the master's per-address hazard control, even
+/// while both sides randomly stall.
+alias package mix_pkg = $std::axi4_lite_pkg::<32, 4, 4>;
+
+#[test(axi4_lite_mixed)]
+module axi4_lite_mixed {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    inst bus: $std::axi4_lite_if::<mix_pkg>;
+
+    inst mst: $comp::axi4_lite_master #(
+        STALL          : 32,
+        MAX_OUTSTANDING: 4 ,
+    ) (
+        clk            ,
+        rst            ,
+        axi: bus.master,
+    );
+    inst chk: $comp::axi4_lite_checker #(
+        TIMEOUT: 500,
+    ) (
+        clk             ,
+        rst             ,
+        axi: bus.monitor,
+    );
+    inst ram: $comp::axi4_lite_ram #(
+        STALL       : 32      ,
+        READ_LATENCY: 1       ,
+        SIZE        : 32'h1000,
+    ) (
+        clk           ,
+        rst           ,
+        axi: bus.slave,
+    );
+
+    initial {
+        rst.assert();
+        clk.next(4);
+
+        // 200 interleaved random ops (40% reads) over a 128-byte window;
+        // each read is checked against the value last written there.
+        mst.random_traffic(200, 7, 40);
+        clk.next(8000);
+        $assert(mst.idle() == 1, "mixed traffic drained");
+        $finish();
+    }
+}
