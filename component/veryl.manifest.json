@@ -1,0 +1,2295 @@
+{
+  "types": {
+    "axi4_lite_checker": {
+      "doc": "Passive AXI4-Lite protocol checker. Connect to the `monitor` modport;\nit drives nothing and fails the test on any handshake or response\nviolation it sees. Works at any bus width (payloads compare as values).",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock; every edge samples the monitored signals."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; while asserted all VALIDs must stay low and handshake\nhistory is cleared."
+        }
+      ],
+      "params": [
+        {
+          "name": "TIMEOUT",
+          "type": "u64",
+          "optional": true,
+          "doc": "Cycles a channel may stay stalled (VALID without READY) before it is\nreported as a hang. Left unset the timeout is disabled."
+        },
+        {
+          "name": "LIVENESS",
+          "type": "u64",
+          "optional": true,
+          "doc": "Cycles the bus may show no handshake at all while a response is\noutstanding before it is reported as a deadlock. Unset disables it."
+        },
+        {
+          "name": "REPORT",
+          "type": "str",
+          "optional": true,
+          "doc": "If set, the end-of-test coverage summary is also written to this path."
+        }
+      ],
+      "requires": [
+        "file"
+      ],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_lite_if",
+          "modport": "monitor",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "input"
+            },
+            {
+              "member": "awready",
+              "dir": "input"
+            },
+            {
+              "member": "awaddr",
+              "dir": "input"
+            },
+            {
+              "member": "awprot",
+              "dir": "input"
+            },
+            {
+              "member": "wvalid",
+              "dir": "input"
+            },
+            {
+              "member": "wready",
+              "dir": "input"
+            },
+            {
+              "member": "wdata",
+              "dir": "input"
+            },
+            {
+              "member": "wstrb",
+              "dir": "input"
+            },
+            {
+              "member": "bvalid",
+              "dir": "input"
+            },
+            {
+              "member": "bready",
+              "dir": "input"
+            },
+            {
+              "member": "bresp",
+              "dir": "input"
+            },
+            {
+              "member": "arvalid",
+              "dir": "input"
+            },
+            {
+              "member": "arready",
+              "dir": "input"
+            },
+            {
+              "member": "araddr",
+              "dir": "input"
+            },
+            {
+              "member": "arprot",
+              "dir": "input"
+            },
+            {
+              "member": "rvalid",
+              "dir": "input"
+            },
+            {
+              "member": "rready",
+              "dir": "input"
+            },
+            {
+              "member": "rdata",
+              "dir": "input"
+            },
+            {
+              "member": "rresp",
+              "dir": "input"
+            }
+          ]
+        }
+      ],
+      "methods": []
+    },
+    "axi4_lite_ram": {
+      "doc": "Backdoor `poke`/`peek`/`load_hex`/`set_resp` methods let a testbench\npreload memory, inspect it, and inject error responses in zero time.",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; clears in-flight transactions but keeps memory contents."
+        }
+      ],
+      "params": [
+        {
+          "name": "READ_LATENCY",
+          "type": "u64",
+          "optional": true,
+          "doc": "Extra cycles before a read response."
+        },
+        {
+          "name": "WRITE_LATENCY",
+          "type": "u64",
+          "optional": true,
+          "doc": "Extra cycles before a write response."
+        },
+        {
+          "name": "STALL",
+          "type": "u64",
+          "optional": true,
+          "doc": "0..=255 weight for randomly dropping READY; unset means never."
+        },
+        {
+          "name": "SIZE",
+          "type": "u64",
+          "optional": true,
+          "doc": "Memory size in bytes; accesses at or above it answer DECERR. Unset\nmeans unbounded."
+        }
+      ],
+      "requires": [
+        "file"
+      ],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_lite_if",
+          "modport": "slave",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "input"
+            },
+            {
+              "member": "awready",
+              "dir": "output"
+            },
+            {
+              "member": "awaddr",
+              "dir": "input"
+            },
+            {
+              "member": "wvalid",
+              "dir": "input"
+            },
+            {
+              "member": "wready",
+              "dir": "output"
+            },
+            {
+              "member": "wdata",
+              "dir": "input"
+            },
+            {
+              "member": "wstrb",
+              "dir": "input"
+            },
+            {
+              "member": "bvalid",
+              "dir": "output"
+            },
+            {
+              "member": "bready",
+              "dir": "input"
+            },
+            {
+              "member": "bresp",
+              "dir": "output"
+            },
+            {
+              "member": "arvalid",
+              "dir": "input"
+            },
+            {
+              "member": "arready",
+              "dir": "output"
+            },
+            {
+              "member": "araddr",
+              "dir": "input"
+            },
+            {
+              "member": "rvalid",
+              "dir": "output"
+            },
+            {
+              "member": "rready",
+              "dir": "input"
+            },
+            {
+              "member": "rdata",
+              "dir": "output"
+            },
+            {
+              "member": "rresp",
+              "dir": "output"
+            }
+          ]
+        }
+      ],
+      "methods": [
+        {
+          "name": "poke",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Backdoor write of one aligned word at full bus width."
+        },
+        {
+          "name": "peek",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            }
+          ],
+          "ret": "value",
+          "ret_width": {
+            "op": "*",
+            "lhs": "axi.DATA_WIDTH_BYTES",
+            "rhs": 8
+          },
+          "doc": "Backdoor read of one aligned word at full bus width."
+        },
+        {
+          "name": "set_resp",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "code",
+              "type": "u64"
+            }
+          ],
+          "doc": "Makes the slave answer a given address with a response code\n(`0` OKAY, `2` SLVERR, `3` DECERR). OKAY clears any injected error."
+        },
+        {
+          "name": "set_readonly",
+          "args": [
+            {
+              "name": "start",
+              "type": "u64"
+            },
+            {
+              "name": "len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Marks the `[start, start + len)` byte range write-protected: writes\nthere answer SLVERR while reads still succeed (models a ROM region)."
+        },
+        {
+          "name": "dump_hex",
+          "args": [
+            {
+              "name": "path",
+              "type": "str"
+            }
+          ],
+          "doc": "Writes the memory contents (the low 64 bits of each written word) out\nas `addr data` hex pairs, sorted by address — the `load_hex` format."
+        },
+        {
+          "name": "load_hex",
+          "args": [
+            {
+              "name": "path",
+              "type": "str"
+            }
+          ],
+          "doc": "Loads `addr data` hex pairs, one per line, into memory. Lines that\nare blank or start with `#` are ignored."
+        }
+      ]
+    },
+    "axi4_lite_master": {
+      "doc": "`expect_read`/`expect_write` turn the master into a self-checking\nscoreboard: it compares the read data (or checks the write response)\nitself and fails the test on a mismatch. The `STALL` parameter randomly\ndelays READY to stress the slave.",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; drops in-flight transactions and clears the queues."
+        }
+      ],
+      "params": [
+        {
+          "name": "STALL",
+          "type": "u64",
+          "optional": true,
+          "doc": "0..=255 weight for randomly delaying BREADY/RREADY; unset never\nstalls."
+        },
+        {
+          "name": "MAX_OUTSTANDING",
+          "type": "u64",
+          "optional": true,
+          "doc": "Maximum responses in flight per direction; unset means unbounded."
+        },
+        {
+          "name": "W_DELAY",
+          "type": "u64",
+          "optional": true,
+          "doc": "Cycles to hold WVALID back after AWVALID, to skew the write address\nand data channels and stress the slave. Unset asserts them together."
+        }
+      ],
+      "requires": [],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_lite_if",
+          "modport": "master",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "output"
+            },
+            {
+              "member": "awready",
+              "dir": "input"
+            },
+            {
+              "member": "awaddr",
+              "dir": "output"
+            },
+            {
+              "member": "awprot",
+              "dir": "output"
+            },
+            {
+              "member": "wvalid",
+              "dir": "output"
+            },
+            {
+              "member": "wready",
+              "dir": "input"
+            },
+            {
+              "member": "wdata",
+              "dir": "output"
+            },
+            {
+              "member": "wstrb",
+              "dir": "output"
+            },
+            {
+              "member": "bvalid",
+              "dir": "input"
+            },
+            {
+              "member": "bready",
+              "dir": "output"
+            },
+            {
+              "member": "bresp",
+              "dir": "input"
+            },
+            {
+              "member": "arvalid",
+              "dir": "output"
+            },
+            {
+              "member": "arready",
+              "dir": "input"
+            },
+            {
+              "member": "araddr",
+              "dir": "output"
+            },
+            {
+              "member": "arprot",
+              "dir": "output"
+            },
+            {
+              "member": "rvalid",
+              "dir": "input"
+            },
+            {
+              "member": "rready",
+              "dir": "output"
+            },
+            {
+              "member": "rdata",
+              "dir": "input"
+            }
+          ]
+        }
+      ],
+      "methods": [
+        {
+          "name": "write",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a full-width write."
+        },
+        {
+          "name": "write_strb",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            },
+            {
+              "name": "strb",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a write with an explicit byte-strobe."
+        },
+        {
+          "name": "expect_write",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a self-checking write: the response must be OKAY or the test\nfails."
+        },
+        {
+          "name": "read",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues a read; retrieve its data later with `pop_read`."
+        },
+        {
+          "name": "expect_read",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a self-checking read: the returned data is compared against\n`data` and a mismatch fails the test. No result is queued for\n`pop_read`."
+        },
+        {
+          "name": "rmw",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "mask",
+              "type": "value"
+            },
+            {
+              "name": "value",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues an atomic read-modify-write: reads `addr`, replaces the bits\nselected by `mask` with those from `value`, and writes it back. The\ntwo accesses stay ordered on the bus by the hazard control."
+        },
+        {
+          "name": "random_writes",
+          "args": [
+            {
+              "name": "count",
+              "type": "u64"
+            },
+            {
+              "name": "addr_bits",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues `count` self-checking writes of random data to random\nword-aligned addresses within a `2^addr_bits`-byte window, recording\neach value. Drain them, then call `verify_all` to read them back and\ncheck every location. Works at any bus width. Deterministic per seed."
+        },
+        {
+          "name": "random_strobed_writes",
+          "args": [
+            {
+              "name": "count",
+              "type": "u64"
+            },
+            {
+              "name": "addr_bits",
+              "type": "u64"
+            }
+          ],
+          "doc": "Like `random_writes` but with a random partial byte-strobe on each\nwrite, so partial-lane writes are exercised. The shadow copy is\nmerged byte-wise to match, then checked back by `verify_all`."
+        },
+        {
+          "name": "random_traffic",
+          "args": [
+            {
+              "name": "count",
+              "type": "u64"
+            },
+            {
+              "name": "addr_bits",
+              "type": "u64"
+            },
+            {
+              "name": "read_percent",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues `count` random self-checking transactions to a\n`2^addr_bits`-byte window, each a read with probability\n`read_percent/100` (checked against the value last written) or else a\nwrite of random data. Same-address accesses are serialized on the bus\nso reads always observe the intended value. Works at any bus width."
+        },
+        {
+          "name": "verify_all",
+          "args": [],
+          "ret": "u64",
+          "doc": "Queues a self-checking read of every address written by\n`random_writes`, returning how many. Call after the writes have\ndrained; a read-back mismatch fails the test."
+        },
+        {
+          "name": "pop_read",
+          "args": [],
+          "ret": "value",
+          "ret_width": {
+            "op": "*",
+            "lhs": "axi.DATA_WIDTH_BYTES",
+            "rhs": 8
+          },
+          "doc": "Pops the oldest completed read at full bus width, erroring if none\nis ready."
+        },
+        {
+          "name": "num_reads",
+          "args": [],
+          "ret": "u64",
+          "doc": "Number of completed reads waiting in the result queue."
+        },
+        {
+          "name": "idle",
+          "args": [],
+          "ret": "u64",
+          "doc": "1 when every queued transaction has completed, else 0."
+        },
+        {
+          "name": "last_bresp",
+          "args": [],
+          "ret": "u64",
+          "doc": "Response code of the most recent write (`0` = OKAY, `2` = SLVERR)."
+        }
+      ]
+    },
+    "axi4_stream_source": {
+      "doc": "The `STALL` parameter randomly inserts idle cycles between beats (`TVALID`\nitself is never dropped mid-beat, as AXI4-Stream requires).",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; drops in-flight beats and clears the queue."
+        }
+      ],
+      "params": [
+        {
+          "name": "STALL",
+          "type": "u64",
+          "optional": true,
+          "doc": "0..=255 weight for randomly gapping the stream between beats."
+        }
+      ],
+      "requires": [],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_stream_if",
+          "modport": "transmitter",
+          "members": [
+            {
+              "member": "tvalid",
+              "dir": "output"
+            },
+            {
+              "member": "tready",
+              "dir": "input"
+            },
+            {
+              "member": "tdata",
+              "dir": "output"
+            },
+            {
+              "member": "tstrb",
+              "dir": "output"
+            },
+            {
+              "member": "tkeep",
+              "dir": "output"
+            },
+            {
+              "member": "tlast",
+              "dir": "output"
+            },
+            {
+              "member": "tid",
+              "dir": "output"
+            },
+            {
+              "member": "tdest",
+              "dir": "output"
+            },
+            {
+              "member": "tuser",
+              "dir": "output"
+            }
+          ]
+        }
+      ],
+      "methods": [
+        {
+          "name": "send",
+          "args": [
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a beat (not the last of a packet)."
+        },
+        {
+          "name": "send_last",
+          "args": [
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues the last beat of a packet (asserts `TLAST`)."
+        },
+        {
+          "name": "random_traffic",
+          "args": [
+            {
+              "name": "count",
+              "type": "u64"
+            },
+            {
+              "name": "packet_len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues `count` random beats forming packets of about `packet_len`\nbeats (a `TLAST` roughly every `packet_len`). Deterministic per seed."
+        },
+        {
+          "name": "idle",
+          "args": [],
+          "ret": "u64",
+          "doc": "1 when every queued beat has been accepted, else 0."
+        }
+      ]
+    },
+    "axi4_stream_sink": {
+      "doc": "The `STALL` parameter randomly drops `TREADY` to backpressure the source.",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; clears the receive and expect queues."
+        }
+      ],
+      "params": [
+        {
+          "name": "STALL",
+          "type": "u64",
+          "optional": true,
+          "doc": "0..=255 weight for randomly dropping TREADY; unset is always ready."
+        }
+      ],
+      "requires": [],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_stream_if",
+          "modport": "receiver",
+          "members": [
+            {
+              "member": "tvalid",
+              "dir": "input"
+            },
+            {
+              "member": "tready",
+              "dir": "output"
+            },
+            {
+              "member": "tdata",
+              "dir": "input"
+            },
+            {
+              "member": "tlast",
+              "dir": "input"
+            }
+          ]
+        }
+      ],
+      "methods": [
+        {
+          "name": "recv",
+          "args": [],
+          "ret": "value",
+          "ret_width": "axi.TDATA_WIDTH",
+          "doc": "Pops the oldest received beat at full bus width, erroring if none."
+        },
+        {
+          "name": "expect",
+          "args": [
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Self-checks the next received beat against `data`; a mismatch fails\nthe test."
+        },
+        {
+          "name": "num_received",
+          "args": [],
+          "ret": "u64",
+          "doc": "Number of received beats not yet drained by `recv`."
+        },
+        {
+          "name": "beats",
+          "args": [],
+          "ret": "u64",
+          "doc": "Total beats accepted so far."
+        },
+        {
+          "name": "packets",
+          "args": [],
+          "ret": "u64",
+          "doc": "Total packets (TLAST beats) accepted so far."
+        },
+        {
+          "name": "idle",
+          "args": [],
+          "ret": "u64",
+          "doc": "1 when no self-check is still pending, else 0."
+        }
+      ]
+    },
+    "axi4_stream_checker": {
+      "doc": "Passive AXI4-Stream protocol checker. Connect to the `monitor` modport;\nit drives nothing and fails the test on any handshake violation. Works at\nany bus width (payloads compare as values).",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; while asserted TVALID must stay low."
+        }
+      ],
+      "params": [
+        {
+          "name": "TIMEOUT",
+          "type": "u64",
+          "optional": true,
+          "doc": "Cycles TVALID may stay high without TREADY before a hang is reported."
+        },
+        {
+          "name": "REPORT",
+          "type": "str",
+          "optional": true,
+          "doc": "If set, the end-of-test coverage summary is written to this path."
+        }
+      ],
+      "requires": [
+        "file"
+      ],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_stream_if",
+          "modport": "monitor",
+          "members": [
+            {
+              "member": "tvalid",
+              "dir": "input"
+            },
+            {
+              "member": "tready",
+              "dir": "input"
+            },
+            {
+              "member": "tdata",
+              "dir": "input"
+            },
+            {
+              "member": "tstrb",
+              "dir": "input"
+            },
+            {
+              "member": "tkeep",
+              "dir": "input"
+            },
+            {
+              "member": "tlast",
+              "dir": "input"
+            },
+            {
+              "member": "tid",
+              "dir": "input"
+            },
+            {
+              "member": "tdest",
+              "dir": "input"
+            },
+            {
+              "member": "tuser",
+              "dir": "input"
+            }
+          ]
+        }
+      ],
+      "methods": []
+    },
+    "axi4_master": {
+      "doc": "Active AXI4 master. Connect to the `master` modport. Pipelines up to\n`MAX_OUTSTANDING` reads and writes with distinct IDs and matches each\nresponse to its transaction by ID, so it handles a slave's interleaved\nout-of-order read data. Read data is self-checked. `random_burst_writes` /\n`random_bursts` + `verify_all` give a randomized burst regression.\n`exclusive_read` / `exclusive_write` exercise the locked read-modify-write\npath; `exclusive_ok` reports whether the last exclusive write got EXOKAY.",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; drops in-flight bursts and clears the queues."
+        }
+      ],
+      "params": [
+        {
+          "name": "STALL",
+          "type": "u64",
+          "optional": true,
+          "doc": "0..=255 weight for randomly delaying BREADY/RREADY."
+        },
+        {
+          "name": "MAX_OUTSTANDING",
+          "type": "u64",
+          "optional": true,
+          "doc": "Maximum outstanding transactions per direction; unset means 4."
+        }
+      ],
+      "requires": [],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_if",
+          "modport": "master",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "output"
+            },
+            {
+              "member": "awready",
+              "dir": "input"
+            },
+            {
+              "member": "awaddr",
+              "dir": "output"
+            },
+            {
+              "member": "awlen",
+              "dir": "output"
+            },
+            {
+              "member": "awsize",
+              "dir": "output"
+            },
+            {
+              "member": "awburst",
+              "dir": "output"
+            },
+            {
+              "member": "awid",
+              "dir": "output"
+            },
+            {
+              "member": "awlock",
+              "dir": "output"
+            },
+            {
+              "member": "wvalid",
+              "dir": "output"
+            },
+            {
+              "member": "wready",
+              "dir": "input"
+            },
+            {
+              "member": "wdata",
+              "dir": "output"
+            },
+            {
+              "member": "wstrb",
+              "dir": "output"
+            },
+            {
+              "member": "wlast",
+              "dir": "output"
+            },
+            {
+              "member": "bvalid",
+              "dir": "input"
+            },
+            {
+              "member": "bready",
+              "dir": "output"
+            },
+            {
+              "member": "bresp",
+              "dir": "input"
+            },
+            {
+              "member": "bid",
+              "dir": "input"
+            },
+            {
+              "member": "arvalid",
+              "dir": "output"
+            },
+            {
+              "member": "arready",
+              "dir": "input"
+            },
+            {
+              "member": "araddr",
+              "dir": "output"
+            },
+            {
+              "member": "arlen",
+              "dir": "output"
+            },
+            {
+              "member": "arsize",
+              "dir": "output"
+            },
+            {
+              "member": "arburst",
+              "dir": "output"
+            },
+            {
+              "member": "arid",
+              "dir": "output"
+            },
+            {
+              "member": "arlock",
+              "dir": "output"
+            },
+            {
+              "member": "rvalid",
+              "dir": "input"
+            },
+            {
+              "member": "rready",
+              "dir": "output"
+            },
+            {
+              "member": "rdata",
+              "dir": "input"
+            },
+            {
+              "member": "rid",
+              "dir": "input"
+            },
+            {
+              "member": "rlast",
+              "dir": "input"
+            }
+          ]
+        }
+      ],
+      "methods": [
+        {
+          "name": "random_burst_writes",
+          "args": [
+            {
+              "name": "count",
+              "type": "u64"
+            },
+            {
+              "name": "addr_bits",
+              "type": "u64"
+            },
+            {
+              "name": "max_len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues `count` random INCR burst writes into a `2^addr_bits`-byte\nwindow (lengths up to `max_len`), recording each beat for `verify_all`."
+        },
+        {
+          "name": "random_bursts",
+          "args": [
+            {
+              "name": "count",
+              "type": "u64"
+            },
+            {
+              "name": "addr_bits",
+              "type": "u64"
+            },
+            {
+              "name": "max_len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues `count` random self-checking bursts with random type\n(INCR/FIXED/WRAP) and random narrow size, per-beat byte strobes."
+        },
+        {
+          "name": "verify_all",
+          "args": [],
+          "ret": "u64",
+          "doc": "Queues a single-beat checked read of every written address; the reads\npipeline (multiple outstanding). Returns how many."
+        },
+        {
+          "name": "read_check_incr",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues an INCR burst read of `len + 1` beats whose data is checked\nagainst `fill` (each word equals its address). Interleaves with other\noutstanding reads."
+        },
+        {
+          "name": "read_burst",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues an INCR burst read of `len + 1` beats; drain with `pop_read`."
+        },
+        {
+          "name": "pop_read",
+          "args": [],
+          "ret": "value",
+          "ret_width": {
+            "op": "*",
+            "lhs": "axi.DATA_WIDTH_BYTES",
+            "rhs": 8
+          },
+          "doc": "Pops the oldest read beat at full bus width, erroring if none."
+        },
+        {
+          "name": "idle",
+          "args": [],
+          "ret": "u64",
+          "doc": "1 when every queued and in-flight transaction has completed, else 0."
+        },
+        {
+          "name": "last_bresp",
+          "args": [],
+          "ret": "u64",
+          "doc": "Response code of the most recent write burst."
+        },
+        {
+          "name": "write",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a single-beat normal write of `data` to `addr`."
+        },
+        {
+          "name": "exclusive_read",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues a single-beat exclusive read of `addr` (`ARLOCK`), arming the\nslave's monitor. Its data drains through `pop_read` like any other read,\nsharing the same FIFO — pop it before issuing later reads if you need\nthe read-modify-write value."
+        },
+        {
+          "name": "exclusive_write",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a single-beat exclusive write of `data` to `addr` (`AWLOCK`). It\nsucceeds (EXOKAY) only if the address is still reserved; check the\noutcome with `exclusive_ok` once the write has drained."
+        },
+        {
+          "name": "exclusive_ok",
+          "args": [],
+          "ret": "u64",
+          "doc": "1 if the most recent exclusive write got EXOKAY (succeeded), else 0."
+        }
+      ]
+    },
+    "axi4_ram": {
+      "doc": "Burst-aware AXI4 slave memory. Connect to the `slave` modport. It accepts\nINCR / FIXED / WRAP bursts, applies byte strobes per beat and echoes the\ntransaction `ID`. Up to `MAX_OUTSTANDING` reads run concurrently and their\nbeats are **interleaved** (out-of-order), so it stresses a master's\nreorder handling. It implements an exclusive-access monitor: an exclusive\nread (`ARLOCK`) reserves its address, an exclusive write (`AWLOCK`) to a\nstill-reserved address succeeds with `EXOKAY`, and any intervening normal\nwrite clears the reservation so the exclusive write fails with `OKAY` and\nleaves memory untouched. Accesses past `SIZE` answer `DECERR` and `set_resp`\ninjects a per-address `SLVERR`/`DECERR`; errored writes leave memory\nuntouched. `STALL` backpressures the ready lines.",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; clears in-flight bursts but keeps memory."
+        }
+      ],
+      "params": [
+        {
+          "name": "STALL",
+          "type": "u64",
+          "optional": true,
+          "doc": "0..=255 weight for randomly dropping the ready outputs."
+        },
+        {
+          "name": "MAX_OUTSTANDING",
+          "type": "u64",
+          "optional": true,
+          "doc": "Concurrent reads (and buffered write responses); unset means 4."
+        },
+        {
+          "name": "SIZE",
+          "type": "u64",
+          "optional": true,
+          "doc": "Memory size in bytes; accesses at or above it answer DECERR. Unset\nmeans unbounded."
+        }
+      ],
+      "requires": [],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_if",
+          "modport": "slave",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "input"
+            },
+            {
+              "member": "awready",
+              "dir": "output"
+            },
+            {
+              "member": "awaddr",
+              "dir": "input"
+            },
+            {
+              "member": "awlen",
+              "dir": "input"
+            },
+            {
+              "member": "awsize",
+              "dir": "input"
+            },
+            {
+              "member": "awburst",
+              "dir": "input"
+            },
+            {
+              "member": "awid",
+              "dir": "input"
+            },
+            {
+              "member": "awlock",
+              "dir": "input"
+            },
+            {
+              "member": "wvalid",
+              "dir": "input"
+            },
+            {
+              "member": "wready",
+              "dir": "output"
+            },
+            {
+              "member": "wdata",
+              "dir": "input"
+            },
+            {
+              "member": "wstrb",
+              "dir": "input"
+            },
+            {
+              "member": "wlast",
+              "dir": "input"
+            },
+            {
+              "member": "bvalid",
+              "dir": "output"
+            },
+            {
+              "member": "bready",
+              "dir": "input"
+            },
+            {
+              "member": "bresp",
+              "dir": "output"
+            },
+            {
+              "member": "bid",
+              "dir": "output"
+            },
+            {
+              "member": "arvalid",
+              "dir": "input"
+            },
+            {
+              "member": "arready",
+              "dir": "output"
+            },
+            {
+              "member": "araddr",
+              "dir": "input"
+            },
+            {
+              "member": "arlen",
+              "dir": "input"
+            },
+            {
+              "member": "arsize",
+              "dir": "input"
+            },
+            {
+              "member": "arburst",
+              "dir": "input"
+            },
+            {
+              "member": "arid",
+              "dir": "input"
+            },
+            {
+              "member": "arlock",
+              "dir": "input"
+            },
+            {
+              "member": "rvalid",
+              "dir": "output"
+            },
+            {
+              "member": "rready",
+              "dir": "input"
+            },
+            {
+              "member": "rdata",
+              "dir": "output"
+            },
+            {
+              "member": "rresp",
+              "dir": "output"
+            },
+            {
+              "member": "rid",
+              "dir": "output"
+            },
+            {
+              "member": "rlast",
+              "dir": "output"
+            }
+          ]
+        }
+      ],
+      "methods": [
+        {
+          "name": "poke",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Backdoor write of one aligned word at full bus width."
+        },
+        {
+          "name": "peek",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            }
+          ],
+          "ret": "value",
+          "ret_width": {
+            "op": "*",
+            "lhs": "axi.DATA_WIDTH_BYTES",
+            "rhs": 8
+          },
+          "doc": "Backdoor read of one aligned word at full bus width."
+        },
+        {
+          "name": "set_resp",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "code",
+              "type": "u64"
+            }
+          ],
+          "doc": "Makes accesses to `addr` answer `code` (0 OKAY, 2 SLVERR, 3 DECERR);\nOKAY clears any injected error. Errored writes do not modify memory."
+        },
+        {
+          "name": "fill",
+          "args": [
+            {
+              "name": "base",
+              "type": "u64"
+            },
+            {
+              "name": "count",
+              "type": "u64"
+            }
+          ],
+          "doc": "Backdoor fill: sets `count` consecutive words starting at `base` to\ntheir own address, so a master can predict read data without writing."
+        }
+      ]
+    },
+    "axi4_checker": {
+      "doc": "Passive AXI4 protocol checker on the `monitor` modport. On top of the\nper-channel handshake-stability rules it enforces burst legality:\n`WLAST`/`RLAST` aligning with `AxLEN`, bursts staying inside a 4 KiB page,\nlegal `AxBURST`/`AxSIZE`. It tracks responses per ID, so it accepts\ninterleaved out-of-order reads and out-of-order write responses, and\nflags a `BID`/`RID` with no outstanding request. Exclusive transactions\n(`AxLOCK`) must be power-of-two, ≤ 16 beats, ≤ 128 bytes and size-aligned,\nand `EXOKAY` may only answer an exclusive access.",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; while asserted all VALIDs must stay low."
+        }
+      ],
+      "params": [
+        {
+          "name": "TIMEOUT",
+          "type": "u64",
+          "optional": true,
+          "doc": "Cycles a channel may stall without READY before a hang is reported."
+        },
+        {
+          "name": "REPORT",
+          "type": "str",
+          "optional": true,
+          "doc": "If set, the end-of-test coverage summary is written to this path."
+        }
+      ],
+      "requires": [
+        "file"
+      ],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi4_if",
+          "modport": "monitor",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "input"
+            },
+            {
+              "member": "awready",
+              "dir": "input"
+            },
+            {
+              "member": "awaddr",
+              "dir": "input"
+            },
+            {
+              "member": "awlen",
+              "dir": "input"
+            },
+            {
+              "member": "awsize",
+              "dir": "input"
+            },
+            {
+              "member": "awburst",
+              "dir": "input"
+            },
+            {
+              "member": "awid",
+              "dir": "input"
+            },
+            {
+              "member": "awlock",
+              "dir": "input"
+            },
+            {
+              "member": "wvalid",
+              "dir": "input"
+            },
+            {
+              "member": "wready",
+              "dir": "input"
+            },
+            {
+              "member": "wdata",
+              "dir": "input"
+            },
+            {
+              "member": "wstrb",
+              "dir": "input"
+            },
+            {
+              "member": "wlast",
+              "dir": "input"
+            },
+            {
+              "member": "bvalid",
+              "dir": "input"
+            },
+            {
+              "member": "bready",
+              "dir": "input"
+            },
+            {
+              "member": "bresp",
+              "dir": "input"
+            },
+            {
+              "member": "bid",
+              "dir": "input"
+            },
+            {
+              "member": "arvalid",
+              "dir": "input"
+            },
+            {
+              "member": "arready",
+              "dir": "input"
+            },
+            {
+              "member": "araddr",
+              "dir": "input"
+            },
+            {
+              "member": "arlen",
+              "dir": "input"
+            },
+            {
+              "member": "arsize",
+              "dir": "input"
+            },
+            {
+              "member": "arburst",
+              "dir": "input"
+            },
+            {
+              "member": "arid",
+              "dir": "input"
+            },
+            {
+              "member": "arlock",
+              "dir": "input"
+            },
+            {
+              "member": "rvalid",
+              "dir": "input"
+            },
+            {
+              "member": "rready",
+              "dir": "input"
+            },
+            {
+              "member": "rdata",
+              "dir": "input"
+            },
+            {
+              "member": "rresp",
+              "dir": "input"
+            },
+            {
+              "member": "rid",
+              "dir": "input"
+            },
+            {
+              "member": "rlast",
+              "dir": "input"
+            }
+          ]
+        }
+      ],
+      "methods": []
+    },
+    "axi3_master": {
+      "doc": "Active AXI3 master. Connect to the `master` modport. It issues up to\n`MAX_OUTSTANDING` write bursts with distinct IDs and interleaves their W\nbeats by driving `WID`, exercising a slave's write-data-interleaving path\n(the AXI3-only feature dropped in AXI4). Reads pipeline out-of-order by ID\nand are self-checked. `exclusive_read` / `exclusive_write` drive the 2-bit\n`AxLOCK` and `exclusive_ok` reports the last exclusive write's outcome.",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; drops in-flight bursts and clears the queues."
+        }
+      ],
+      "params": [
+        {
+          "name": "STALL",
+          "type": "u64",
+          "optional": true,
+          "doc": "0..=255 weight for randomly delaying BREADY/RREADY."
+        },
+        {
+          "name": "MAX_OUTSTANDING",
+          "type": "u64",
+          "optional": true,
+          "doc": "Maximum outstanding transactions per direction; unset means 4."
+        }
+      ],
+      "requires": [],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi3_if",
+          "modport": "master",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "output"
+            },
+            {
+              "member": "awready",
+              "dir": "input"
+            },
+            {
+              "member": "awaddr",
+              "dir": "output"
+            },
+            {
+              "member": "awlen",
+              "dir": "output"
+            },
+            {
+              "member": "awsize",
+              "dir": "output"
+            },
+            {
+              "member": "awburst",
+              "dir": "output"
+            },
+            {
+              "member": "awid",
+              "dir": "output"
+            },
+            {
+              "member": "awlock",
+              "dir": "output"
+            },
+            {
+              "member": "wvalid",
+              "dir": "output"
+            },
+            {
+              "member": "wready",
+              "dir": "input"
+            },
+            {
+              "member": "wdata",
+              "dir": "output"
+            },
+            {
+              "member": "wstrb",
+              "dir": "output"
+            },
+            {
+              "member": "wlast",
+              "dir": "output"
+            },
+            {
+              "member": "wid",
+              "dir": "output"
+            },
+            {
+              "member": "bvalid",
+              "dir": "input"
+            },
+            {
+              "member": "bready",
+              "dir": "output"
+            },
+            {
+              "member": "bresp",
+              "dir": "input"
+            },
+            {
+              "member": "bid",
+              "dir": "input"
+            },
+            {
+              "member": "arvalid",
+              "dir": "output"
+            },
+            {
+              "member": "arready",
+              "dir": "input"
+            },
+            {
+              "member": "araddr",
+              "dir": "output"
+            },
+            {
+              "member": "arlen",
+              "dir": "output"
+            },
+            {
+              "member": "arsize",
+              "dir": "output"
+            },
+            {
+              "member": "arburst",
+              "dir": "output"
+            },
+            {
+              "member": "arid",
+              "dir": "output"
+            },
+            {
+              "member": "arlock",
+              "dir": "output"
+            },
+            {
+              "member": "rvalid",
+              "dir": "input"
+            },
+            {
+              "member": "rready",
+              "dir": "output"
+            },
+            {
+              "member": "rdata",
+              "dir": "input"
+            },
+            {
+              "member": "rid",
+              "dir": "input"
+            },
+            {
+              "member": "rlast",
+              "dir": "input"
+            }
+          ]
+        }
+      ],
+      "methods": [
+        {
+          "name": "burst_write_fill",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues a burst write whose beat values equal their addresses, recording\nthem for `verify_all`. Queue several to see their W data interleave."
+        },
+        {
+          "name": "random_burst_writes",
+          "args": [
+            {
+              "name": "count",
+              "type": "u64"
+            },
+            {
+              "name": "addr_bits",
+              "type": "u64"
+            },
+            {
+              "name": "max_len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues `count` random INCR burst writes (lengths up to `max_len`, capped\nat the AXI3 16-beat limit) into a `2^addr_bits`-byte window."
+        },
+        {
+          "name": "verify_all",
+          "args": [],
+          "ret": "u64",
+          "doc": "Queues a single-beat checked read of every written address. Returns how\nmany; a read-back mismatch fails the test."
+        },
+        {
+          "name": "write",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a single-beat normal write of `data` to `addr`."
+        },
+        {
+          "name": "read_burst",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "len",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues an INCR burst read of `len + 1` beats; drain with `pop_read`."
+        },
+        {
+          "name": "pop_read",
+          "args": [],
+          "ret": "value",
+          "ret_width": {
+            "op": "*",
+            "lhs": "axi.DATA_WIDTH_BYTES",
+            "rhs": 8
+          },
+          "doc": "Pops the oldest read beat at full bus width, erroring if none."
+        },
+        {
+          "name": "exclusive_read",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            }
+          ],
+          "doc": "Queues a single-beat exclusive read of `addr` (2-bit `ARLOCK` = 0b01).\nIts data drains through `pop_read` like any other read, sharing the same\nFIFO — pop it before issuing later reads if you need the value."
+        },
+        {
+          "name": "exclusive_write",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Queues a single-beat exclusive write of `data` to `addr` (`AWLOCK` =\n0b01); check the outcome with `exclusive_ok` once it has drained."
+        },
+        {
+          "name": "exclusive_ok",
+          "args": [],
+          "ret": "u64",
+          "doc": "1 if the most recent exclusive write got EXOKAY (succeeded), else 0."
+        },
+        {
+          "name": "idle",
+          "args": [],
+          "ret": "u64",
+          "doc": "1 when every queued and in-flight transaction has completed, else 0."
+        }
+      ]
+    },
+    "axi3_ram": {
+      "doc": "AXI3 slave memory. Connect to the `slave` modport. Unlike AXI4 it accepts\n**interleaved write data**: each W beat carries a `WID` that selects which\noutstanding write burst it belongs to, so up to `MAX_OUTSTANDING` writes\ncan stream concurrently. It keeps an exclusive-access monitor (2-bit\n`AxLOCK`, `0b01` = exclusive), interleaves reads out-of-order, and answers\n`DECERR` past `SIZE` or an injected `SLVERR`/`DECERR` (`set_resp`).",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; clears in-flight bursts but keeps memory."
+        }
+      ],
+      "params": [
+        {
+          "name": "STALL",
+          "type": "u64",
+          "optional": true,
+          "doc": "0..=255 weight for randomly dropping the ready outputs."
+        },
+        {
+          "name": "MAX_OUTSTANDING",
+          "type": "u64",
+          "optional": true,
+          "doc": "Concurrent writes / reads / buffered responses; unset means 4."
+        },
+        {
+          "name": "SIZE",
+          "type": "u64",
+          "optional": true,
+          "doc": "Memory size in bytes; accesses at or above it answer DECERR. Unset\nmeans unbounded."
+        }
+      ],
+      "requires": [],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi3_if",
+          "modport": "slave",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "input"
+            },
+            {
+              "member": "awready",
+              "dir": "output"
+            },
+            {
+              "member": "awaddr",
+              "dir": "input"
+            },
+            {
+              "member": "awlen",
+              "dir": "input"
+            },
+            {
+              "member": "awsize",
+              "dir": "input"
+            },
+            {
+              "member": "awburst",
+              "dir": "input"
+            },
+            {
+              "member": "awid",
+              "dir": "input"
+            },
+            {
+              "member": "awlock",
+              "dir": "input"
+            },
+            {
+              "member": "wvalid",
+              "dir": "input"
+            },
+            {
+              "member": "wready",
+              "dir": "output"
+            },
+            {
+              "member": "wdata",
+              "dir": "input"
+            },
+            {
+              "member": "wstrb",
+              "dir": "input"
+            },
+            {
+              "member": "wlast",
+              "dir": "input"
+            },
+            {
+              "member": "wid",
+              "dir": "input"
+            },
+            {
+              "member": "bvalid",
+              "dir": "output"
+            },
+            {
+              "member": "bready",
+              "dir": "input"
+            },
+            {
+              "member": "bresp",
+              "dir": "output"
+            },
+            {
+              "member": "bid",
+              "dir": "output"
+            },
+            {
+              "member": "arvalid",
+              "dir": "input"
+            },
+            {
+              "member": "arready",
+              "dir": "output"
+            },
+            {
+              "member": "araddr",
+              "dir": "input"
+            },
+            {
+              "member": "arlen",
+              "dir": "input"
+            },
+            {
+              "member": "arsize",
+              "dir": "input"
+            },
+            {
+              "member": "arburst",
+              "dir": "input"
+            },
+            {
+              "member": "arid",
+              "dir": "input"
+            },
+            {
+              "member": "arlock",
+              "dir": "input"
+            },
+            {
+              "member": "rvalid",
+              "dir": "output"
+            },
+            {
+              "member": "rready",
+              "dir": "input"
+            },
+            {
+              "member": "rdata",
+              "dir": "output"
+            },
+            {
+              "member": "rresp",
+              "dir": "output"
+            },
+            {
+              "member": "rid",
+              "dir": "output"
+            },
+            {
+              "member": "rlast",
+              "dir": "output"
+            }
+          ]
+        }
+      ],
+      "methods": [
+        {
+          "name": "poke",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "data",
+              "type": "value"
+            }
+          ],
+          "doc": "Backdoor write of one aligned word at full bus width."
+        },
+        {
+          "name": "peek",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            }
+          ],
+          "ret": "value",
+          "ret_width": {
+            "op": "*",
+            "lhs": "axi.DATA_WIDTH_BYTES",
+            "rhs": 8
+          },
+          "doc": "Backdoor read of one aligned word at full bus width."
+        },
+        {
+          "name": "set_resp",
+          "args": [
+            {
+              "name": "addr",
+              "type": "u64"
+            },
+            {
+              "name": "code",
+              "type": "u64"
+            }
+          ],
+          "doc": "Makes accesses to `addr` answer `code` (0 OKAY, 2 SLVERR, 3 DECERR);\nOKAY clears any injected error. Errored writes do not modify memory."
+        }
+      ]
+    },
+    "axi3_checker": {
+      "doc": "Passive AXI3 protocol checker on the `monitor` modport. It enforces the\nper-channel handshake-stability rules and burst legality, counts `WLAST`\nper `WID` (write data may interleave), tracks B/R responses per ID (out of\norder), validates the 2-bit `AxLOCK` and that `EXOKAY` only answers an\nexclusive access, and reports coverage at `$finish`.",
+      "kind": "clocked",
+      "ports": [
+        {
+          "name": "clk",
+          "dir": "input",
+          "role": "clock",
+          "doc": "Bus clock."
+        },
+        {
+          "name": "rst",
+          "dir": "input",
+          "role": "reset",
+          "doc": "Bus reset; while asserted all VALIDs must stay low."
+        }
+      ],
+      "params": [
+        {
+          "name": "TIMEOUT",
+          "type": "u64",
+          "optional": true,
+          "doc": "Cycles a channel may stall without READY before a hang is reported."
+        },
+        {
+          "name": "REPORT",
+          "type": "str",
+          "optional": true,
+          "doc": "If set, the end-of-test coverage summary is written to this path."
+        }
+      ],
+      "requires": [
+        "file"
+      ],
+      "groups": [
+        {
+          "name": "axi",
+          "interface": "$std::axi3_if",
+          "modport": "monitor",
+          "members": [
+            {
+              "member": "awvalid",
+              "dir": "input"
+            },
+            {
+              "member": "awready",
+              "dir": "input"
+            },
+            {
+              "member": "awaddr",
+              "dir": "input"
+            },
+            {
+              "member": "awlen",
+              "dir": "input"
+            },
+            {
+              "member": "awsize",
+              "dir": "input"
+            },
+            {
+              "member": "awburst",
+              "dir": "input"
+            },
+            {
+              "member": "awid",
+              "dir": "input"
+            },
+            {
+              "member": "awlock",
+              "dir": "input"
+            },
+            {
+              "member": "wvalid",
+              "dir": "input"
+            },
+            {
+              "member": "wready",
+              "dir": "input"
+            },
+            {
+              "member": "wdata",
+              "dir": "input"
+            },
+            {
+              "member": "wstrb",
+              "dir": "input"
+            },
+            {
+              "member": "wlast",
+              "dir": "input"
+            },
+            {
+              "member": "wid",
+              "dir": "input"
+            },
+            {
+              "member": "bvalid",
+              "dir": "input"
+            },
+            {
+              "member": "bready",
+              "dir": "input"
+            },
+            {
+              "member": "bresp",
+              "dir": "input"
+            },
+            {
+              "member": "bid",
+              "dir": "input"
+            },
+            {
+              "member": "arvalid",
+              "dir": "input"
+            },
+            {
+              "member": "arready",
+              "dir": "input"
+            },
+            {
+              "member": "araddr",
+              "dir": "input"
+            },
+            {
+              "member": "arlen",
+              "dir": "input"
+            },
+            {
+              "member": "arsize",
+              "dir": "input"
+            },
+            {
+              "member": "arburst",
+              "dir": "input"
+            },
+            {
+              "member": "arid",
+              "dir": "input"
+            },
+            {
+              "member": "arlock",
+              "dir": "input"
+            },
+            {
+              "member": "rvalid",
+              "dir": "input"
+            },
+            {
+              "member": "rready",
+              "dir": "input"
+            },
+            {
+              "member": "rdata",
+              "dir": "input"
+            },
+            {
+              "member": "rresp",
+              "dir": "input"
+            },
+            {
+              "member": "rid",
+              "dir": "input"
+            },
+            {
+              "member": "rlast",
+              "dir": "input"
+            }
+          ]
+        }
+      ],
+      "methods": []
+    }
+  },
+  "source_hash": "2471cb40b132f0781aaa6e8535d14f1c675e0a95c163ec7ba646d79ec9c5969a"
+}
