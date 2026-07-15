@@ -5,6 +5,7 @@ authors     = ["dalance@gmail.com"]
 description = "Verification IP for Veryl"
 license     = "MIT OR Apache-2.0"
 repository  = "https://github.com/veryl-lang/vip"
+categories  = ["verification"]
 
 [publish]
 bump_commit    = true
